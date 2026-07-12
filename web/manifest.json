@@ -1,0 +1,11 @@
+{
+  "name": "Suspect! Impostor Party",
+  "short_name": "Suspect!",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "description": "A social-deduction party game for one phone or browser.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}
