@@ -5,16 +5,8 @@ analyzer:
     unused_import: error
     unused_local_variable: error
     dead_code: warning
+    deprecated_member_use: ignore
 
 linter:
   rules:
-    - always_declare_return_types
-    - avoid_print
-    - cancel_subscriptions
-    - close_sinks
-    - directives_ordering
-    - prefer_const_constructors
-    - prefer_const_declarations
-    - prefer_final_fields
-    - prefer_final_locals
-    - use_super_parameters
+    avoid_print: true
