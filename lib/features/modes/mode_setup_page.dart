@@ -29,46 +29,54 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
         enabledRoles: _roles,
       );
 
-  void _validate() {
-    final message = AdvancedRules.validateConfiguration(_configuration);
+  void _resetOutput() {
+    _preview = null;
+    _validationMessage = null;
+  }
+
+  void _setMode(GameMode mode) {
     setState(() {
-      _validationMessage = message ?? 'Balanced configuration ready.';
-      if (message != null) {
+      _mode = mode;
+      if (mode != GameMode.twoSimilarWords) {
+        _roles.remove(AdvancedRole.saboteur);
+      }
+      _impostorCount = _impostorCount
+          .clamp(1, AdvancedRules.maximumImpostorsFor(_playerCount))
+          .toInt();
+      _resetOutput();
+    });
+  }
+
+  void _validate() {
+    final error = AdvancedRules.validateConfiguration(_configuration);
+    setState(() {
+      _validationMessage = error ?? 'Balanced configuration ready.';
+      if (error != null) {
         _preview = null;
       }
     });
   }
 
   void _generatePreview() {
-    final message = AdvancedRules.validateConfiguration(_configuration);
-    if (message != null) {
+    final error = AdvancedRules.validateConfiguration(_configuration);
+    if (error != null) {
       setState(() {
-        _validationMessage = message;
+        _validationMessage = error;
         _preview = null;
       });
       return;
     }
-    final ids = List.generate(_playerCount, (index) => 'Player ${index + 1}');
+    final playerIds = List.generate(
+      _playerCount,
+      (index) => 'Player ${index + 1}',
+    );
     setState(() {
       _validationMessage = 'Balanced role preview generated.';
       _preview = AdvancedRules.assignRoles(
-        playerIds: ids,
+        playerIds: playerIds,
         configuration: _configuration,
         random: Random(DateTime.now().microsecondsSinceEpoch),
       );
-    });
-  }
-
-  void _selectMode(GameMode mode) {
-    setState(() {
-      _mode = mode;
-      _preview = null;
-      _validationMessage = null;
-      if (mode != GameMode.twoSimilarWords) {
-        _roles.remove(AdvancedRole.saboteur);
-      }
-      final maximum = AdvancedRules.maximumImpostorsFor(_playerCount);
-      _impostorCount = _impostorCount.clamp(1, maximum);
     });
   }
 
@@ -90,31 +98,47 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Choose a game mode',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: GameMode.values.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: MediaQuery.sizeOf(context).width > 720 ? 2 : 1,
-              mainAxisExtent: 116,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Choose a game mode',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<GameMode>(
+                    value: _mode,
+                    decoration: const InputDecoration(
+                      labelText: 'Game mode',
+                      prefixIcon: Icon(Icons.sports_esports_rounded),
+                    ),
+                    items: GameMode.values
+                        .map(
+                          (mode) => DropdownMenuItem(
+                            value: mode,
+                            child: Text(_modeName(mode)),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        _setMode(mode);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _modeDescription(_mode),
+                    style: const TextStyle(color: Colors.white64, height: 1.4),
+                  ),
+                ],
+              ),
             ),
-            itemBuilder: (context, index) {
-              final mode = GameMode.values[index];
-              return _ModeCard(
-                mode: mode,
-                selected: mode == _mode,
-                onTap: () => _selectMode(mode),
-              );
-            },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 14),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(18),
@@ -134,14 +158,16 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                     onChanged: (value) {
                       setState(() {
                         _playerCount = value.round();
-                        final maximum = AdvancedRules.maximumImpostorsFor(_playerCount);
-                        _impostorCount = _impostorCount.clamp(1, maximum);
-                        _preview = null;
-                        _validationMessage = null;
+                        _impostorCount = _impostorCount
+                            .clamp(
+                              1,
+                              AdvancedRules.maximumImpostorsFor(_playerCount),
+                            )
+                            .toInt();
+                        _resetOutput();
                       });
                     },
                   ),
-                  const SizedBox(height: 6),
                   Text(
                     'Impostor-side players: $_impostorCount',
                     style: const TextStyle(fontWeight: FontWeight.w900),
@@ -150,7 +176,7 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Text(
-                        'This player count supports one balanced impostor-side player.',
+                        'This party size supports one balanced impostor-side player.',
                         style: TextStyle(color: Colors.white64),
                       ),
                     )
@@ -164,8 +190,7 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                       onChanged: (value) {
                         setState(() {
                           _impostorCount = value.round();
-                          _preview = null;
-                          _validationMessage = null;
+                          _resetOutput();
                         });
                       },
                     ),
@@ -181,33 +206,33 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           const Text(
-            'Advanced roles',
+            'Optional advanced roles',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           const Text(
-            'Civilian and Classic Impostor are always included. Optional roles are validated against the selected mode and player count.',
-            style: TextStyle(color: Colors.white64, height: 1.4),
+            'Civilian and Classic Impostor are included automatically.',
+            style: TextStyle(color: Colors.white64),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           for (final role in AdvancedRole.values.where(
-            (role) => role != AdvancedRole.civilian && role != AdvancedRole.impostor,
+            (role) => role != AdvancedRole.civilian &&
+                role != AdvancedRole.impostor,
           ))
             SwitchListTile(
               value: _roles.contains(role),
               title: Text(_roleName(role)),
               subtitle: Text(_roleDescription(role)),
-              onChanged: (value) {
+              onChanged: (enabled) {
                 setState(() {
-                  if (value) {
+                  if (enabled) {
                     _roles.add(role);
                   } else {
                     _roles.remove(role);
                   }
-                  _preview = null;
-                  _validationMessage = null;
+                  _resetOutput();
                 });
               },
             ),
@@ -246,10 +271,10 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
             ),
           ],
           if (_preview != null) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -258,11 +283,6 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Actual matches reveal these privately one player at a time.',
-                      style: TextStyle(color: Colors.white64),
-                    ),
-                    const SizedBox(height: 12),
                     for (final entry in _preview!.rolesByPlayerId.entries)
                       ListTile(
                         dense: true,
@@ -280,7 +300,7 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
               ),
             ),
           ],
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           if (_mode == GameMode.classic &&
               _roles.isEmpty &&
               _impostorCount == 1)
@@ -297,82 +317,13 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(18),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline_rounded, color: Color(0xFFFFC857)),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'This configuration is fully validated and can generate balanced private roles. The advanced clue, ability, voting, and role-specific scoring screens are being wired in the next gameplay phase; Classic remains the current complete playable loop.',
-                        style: TextStyle(height: 1.45),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'This setup can validate and generate balanced advanced roles now. The advanced clue, ability, voting, and role-specific scoring screens are the next gameplay integration step; Classic remains the complete playable loop in this build.',
+                  style: TextStyle(height: 1.45),
                 ),
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _ModeCard extends StatelessWidget {
-  const _ModeCard({
-    required this.mode,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final GameMode mode;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected
-              ? const Color(0xFF6D5DFB).withOpacity(0.22)
-              : const Color(0xFF172033),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: selected
-                ? const Color(0xFF9B8CFF)
-                : Colors.white.withOpacity(0.08),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(_modeIcon(mode), size: 34, color: const Color(0xFFFFC857)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _modeName(mode),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    _modeDescription(mode),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white64, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -406,38 +357,17 @@ String _modeDescription(GameMode mode) {
     case GameMode.twoSimilarWords:
       return 'An undercover player receives a curated related alternate word.';
     case GameMode.questionInterrogation:
-      return 'Players answer indirect questions instead of ordinary clues.';
+      return 'Players answer indirect questions instead of giving ordinary clues.';
     case GameMode.emojiClues:
-      return 'Every clue is limited to emoji.';
+      return 'Each clue must contain emoji without ordinary text.';
     case GameMode.speedRound:
-      return 'Short clue timers punish hesitation.';
+      return 'Short clue deadlines punish hesitation.';
     case GameMode.anonymousClues:
-      return 'Clue owners stay hidden until the reveal.';
+      return 'Clue owners remain hidden until voting or round completion.';
     case GameMode.multipleImpostors:
-      return 'Balanced teams support more than one impostor-side player.';
+      return 'Balanced player counts support more than one impostor-side role.';
     case GameMode.oneSentenceStory:
-      return 'Each player adds a sentence that subtly references the word.';
-  }
-}
-
-IconData _modeIcon(GameMode mode) {
-  switch (mode) {
-    case GameMode.classic:
-      return Icons.visibility_off_rounded;
-    case GameMode.twoSimilarWords:
-      return Icons.compare_arrows_rounded;
-    case GameMode.questionInterrogation:
-      return Icons.quiz_rounded;
-    case GameMode.emojiClues:
-      return Icons.emoji_emotions_rounded;
-    case GameMode.speedRound:
-      return Icons.timer_rounded;
-    case GameMode.anonymousClues:
-      return Icons.privacy_tip_rounded;
-    case GameMode.multipleImpostors:
-      return Icons.groups_rounded;
-    case GameMode.oneSentenceStory:
-      return Icons.auto_stories_rounded;
+      return 'Every player adds one sentence that subtly references the word.';
   }
 }
 
@@ -467,11 +397,11 @@ String _roleDescription(AdvancedRole role) {
     case AdvancedRole.impostor:
       return 'Receives no word and wins by survival or a final guess.';
     case AdvancedRole.mimic:
-      return 'May see the first submitted clue before giving their own.';
+      return 'May see the first submitted clue before giving a clue.';
     case AdvancedRole.doubleAgent:
-      return 'Knows the word but secretly belongs to the impostor side.';
+      return 'Knows the real word but belongs to the impostor side.';
     case AdvancedRole.mrBlank:
-      return 'Receives no word and may win individually with a correct guess.';
+      return 'Receives no word and may win with a correct final guess.';
     case AdvancedRole.saboteur:
       return 'Receives a related alternate word in Two Similar Words mode.';
     case AdvancedRole.trickster:
