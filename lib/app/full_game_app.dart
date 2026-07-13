@@ -4,18 +4,30 @@ import '../features/home/full_home_page.dart';
 import 'full_game_controller.dart';
 
 class FullSuspectGameApp extends StatefulWidget {
-  const FullSuspectGameApp({super.key});
+  const FullSuspectGameApp({this.controller, super.key});
+
+  final FullGameController? controller;
 
   @override
   State<FullSuspectGameApp> createState() => _FullSuspectGameAppState();
 }
 
 class _FullSuspectGameAppState extends State<FullSuspectGameApp> {
-  final FullGameController _controller = FullGameController();
+  late final FullGameController _controller;
+  late final bool _ownsController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? FullGameController();
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
