@@ -1,4 +1,4 @@
-name: Flutter Web Preview
+name: Flutter Web Full Game
 
 on:
   push:
@@ -44,11 +44,11 @@ jobs:
       - name: Analyze project
         run: flutter analyze
 
-      - name: Run unit tests
+      - name: Run unit and widget tests
         run: flutter test
 
-      - name: Build web release
-        run: flutter build web --release --base-href "/suspect-impostor-game/"
+      - name: Build full web shell
+        run: flutter build web --release --target lib/full_main.dart --base-href "/suspect-impostor-game/"
 
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
