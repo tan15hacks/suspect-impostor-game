@@ -22,80 +22,6 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
   AdvancedAssignment? _preview;
   String? _validationMessage;
 
-  static const _modeInfo = <GameMode, ({String name, String description, IconData icon})>{
-    GameMode.classic: (
-      name: 'Classic Impostor',
-      description: 'Civilians share one word while impostors bluff without seeing it.',
-      icon: Icons.visibility_off_rounded,
-    ),
-    GameMode.twoSimilarWords: (
-      name: 'Two Similar Words',
-      description: 'Most players see the main word while an undercover player sees a curated alternate.',
-      icon: Icons.compare_arrows_rounded,
-    ),
-    GameMode.questionInterrogation: (
-      name: 'Question Interrogation',
-      description: 'Players answer indirect category questions instead of giving ordinary clues.',
-      icon: Icons.quiz_rounded,
-    ),
-    GameMode.emojiClues: (
-      name: 'Emoji Clues',
-      description: 'Clues are limited to emoji, forcing creative interpretation.',
-      icon: Icons.emoji_emotions_rounded,
-    ),
-    GameMode.speedRound: (
-      name: 'Speed Round',
-      description: 'Short clue timers punish hesitation and create fast suspicion.',
-      icon: Icons.timer_rounded,
-    ),
-    GameMode.anonymousClues: (
-      name: 'Anonymous Clues',
-      description: 'Clue owners stay hidden until voting or round completion.',
-      icon: Icons.privacy_tip_rounded,
-    ),
-    GameMode.multipleImpostors: (
-      name: 'Multiple Impostors',
-      description: 'Balanced teams support more than one impostor-side player.',
-      icon: Icons.groups_rounded,
-    ),
-    GameMode.oneSentenceStory: (
-      name: 'One-Sentence Story',
-      description: 'Each player adds one sentence that subtly references the secret word.',
-      icon: Icons.auto_stories_rounded,
-    ),
-  };
-
-  static const _roleInfo = <AdvancedRole, ({String name, String description})>{
-    AdvancedRole.civilian: (
-      name: 'Civilian',
-      description: 'Knows the word and helps eliminate every impostor.',
-    ),
-    AdvancedRole.impostor: (
-      name: 'Classic Impostor',
-      description: 'Receives no word and wins through survival or a final guess.',
-    ),
-    AdvancedRole.mimic: (
-      name: 'Mimic',
-      description: 'Receives no word but may see the first submitted clue.',
-    ),
-    AdvancedRole.doubleAgent: (
-      name: 'Double Agent',
-      description: 'Knows the real word but secretly belongs to the impostor side.',
-    ),
-    AdvancedRole.mrBlank: (
-      name: 'Mr. Blank',
-      description: 'Receives no word and can win individually with a correct final guess.',
-    ),
-    AdvancedRole.saboteur: (
-      name: 'Saboteur',
-      description: 'Receives a related alternate word and blends between both meanings.',
-    ),
-    AdvancedRole.trickster: (
-      name: 'Trickster',
-      description: 'Wins individually by attracting enough votes without being eliminated.',
-    ),
-  };
-
   RoleConfiguration get _configuration => RoleConfiguration(
         playerCount: _playerCount,
         impostorCount: _impostorCount,
@@ -133,13 +59,27 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
     });
   }
 
+  void _selectMode(GameMode mode) {
+    setState(() {
+      _mode = mode;
+      _preview = null;
+      _validationMessage = null;
+      if (mode != GameMode.twoSimilarWords) {
+        _roles.remove(AdvancedRole.saboteur);
+      }
+      final maximum = AdvancedRules.maximumImpostorsFor(_playerCount);
+      _impostorCount = _impostorCount.clamp(1, maximum);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final compatibleMissionCount = compatibleMissions(
+    final maxImpostors = AdvancedRules.maximumImpostorsFor(_playerCount);
+    final missionCount = compatibleMissions(
       playerCount: _playerCount,
       impostorAligned: true,
     ).length;
-    final compatibleChaosCount = compatibleChaosCards(
+    final chaosCount = compatibleChaosCards(
       playerCount: _playerCount,
       mode: _mode,
     ).length;
@@ -167,64 +107,10 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
             ),
             itemBuilder: (context, index) {
               final mode = GameMode.values[index];
-              final info = _modeInfo[mode]!;
-              final selected = _mode == mode;
-              return InkWell(
-                borderRadius: BorderRadius.circular(22),
-                onTap: () {
-                  setState(() {
-                    _mode = mode;
-                    _preview = null;
-                    _validationMessage = null;
-                    final maximum = AdvancedRules.maximumImpostorsFor(_playerCount);
-                    if (_impostorCount > maximum) {
-                      _impostorCount = maximum;
-                    }
-                    if (mode != GameMode.twoSimilarWords) {
-                      _roles.remove(AdvancedRole.saboteur);
-                    }
-                  });
-                },
-                child: Ink(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? const Color(0xFF6D5DFB).withOpacity(0.22)
-                        : const Color(0xFF172033),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: selected
-                          ? const Color(0xFF9B8CFF)
-                          : Colors.white.withOpacity(0.08),
-                      width: selected ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(info.icon, size: 34, color: const Color(0xFFFFC857)),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              info.name,
-                              style: const TextStyle(fontWeight: FontWeight.w900),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              info.description,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white64, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return _ModeCard(
+                mode: mode,
+                selected: mode == _mode,
+                onTap: () => _selectMode(mode),
               );
             },
           ),
@@ -249,10 +135,9 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                       setState(() {
                         _playerCount = value.round();
                         final maximum = AdvancedRules.maximumImpostorsFor(_playerCount);
-                        if (_impostorCount > maximum) {
-                          _impostorCount = maximum;
-                        }
+                        _impostorCount = _impostorCount.clamp(1, maximum);
                         _preview = null;
+                        _validationMessage = null;
                       });
                     },
                   ),
@@ -261,25 +146,35 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                     'Impostor-side players: $_impostorCount',
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
-                  Slider(
-                    min: 1,
-                    max: AdvancedRules.maximumImpostorsFor(_playerCount).toDouble(),
-                    divisions: max(1, AdvancedRules.maximumImpostorsFor(_playerCount) - 1),
-                    value: _impostorCount.toDouble(),
-                    label: '$_impostorCount',
-                    onChanged: (value) {
-                      setState(() {
-                        _impostorCount = value.round();
-                        _preview = null;
-                      });
-                    },
-                  ),
+                  if (maxImpostors == 1)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        'This player count supports one balanced impostor-side player.',
+                        style: TextStyle(color: Colors.white64),
+                      ),
+                    )
+                  else
+                    Slider(
+                      min: 1,
+                      max: maxImpostors.toDouble(),
+                      divisions: maxImpostors - 1,
+                      value: _impostorCount.toDouble(),
+                      label: '$_impostorCount',
+                      onChanged: (value) {
+                        setState(() {
+                          _impostorCount = value.round();
+                          _preview = null;
+                          _validationMessage = null;
+                        });
+                      },
+                    ),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      Chip(label: Text('$compatibleMissionCount compatible missions')),
-                      Chip(label: Text('$compatibleChaosCount compatible chaos cards')),
+                      Chip(label: Text('$missionCount compatible missions')),
+                      Chip(label: Text('$chaosCount compatible chaos cards')),
                     ],
                   ),
                 ],
@@ -293,7 +188,7 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Civilian and Classic Impostor are always part of the base assignment. Enable optional roles below.',
+            'Civilian and Classic Impostor are always included. Optional roles are validated against the selected mode and player count.',
             style: TextStyle(color: Colors.white64, height: 1.4),
           ),
           const SizedBox(height: 10),
@@ -302,8 +197,8 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
           ))
             SwitchListTile(
               value: _roles.contains(role),
-              title: Text(_roleInfo[role]!.name),
-              subtitle: Text(_roleInfo[role]!.description),
+              title: Text(_roleName(role)),
+              subtitle: Text(_roleDescription(role)),
               onChanged: (value) {
                 setState(() {
                   if (value) {
@@ -341,7 +236,8 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: (_preview == null && _validationMessage != 'Balanced configuration ready.')
+                color: _preview == null &&
+                        _validationMessage != 'Balanced configuration ready.'
                     ? const Color(0xFFB91C1C).withOpacity(0.18)
                     : const Color(0xFF14B8A6).withOpacity(0.16),
                 borderRadius: BorderRadius.circular(16),
@@ -363,7 +259,7 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'This preview proves the assignment and balance rules. Actual matches reveal these privately one player at a time.',
+                      'Actual matches reveal these privately one player at a time.',
                       style: TextStyle(color: Colors.white64),
                     ),
                     const SizedBox(height: 12),
@@ -377,7 +273,7 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                               : Icons.shield_rounded,
                         ),
                         title: Text(entry.key),
-                        trailing: Text(_roleInfo[entry.value]!.name),
+                        trailing: Text(_roleName(entry.value)),
                       ),
                   ],
                 ),
@@ -385,7 +281,9 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
             ),
           ],
           const SizedBox(height: 18),
-          if (_mode == GameMode.classic && _roles.isEmpty && _impostorCount == 1)
+          if (_mode == GameMode.classic &&
+              _roles.isEmpty &&
+              _impostorCount == 1)
             FilledButton.icon(
               onPressed: () {
                 Navigator.of(context).push(
@@ -402,11 +300,11 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.construction_rounded, color: Color(0xFFFFC857)),
+                    Icon(Icons.info_outline_rounded, color: Color(0xFFFFC857)),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'The advanced configuration, balancing, missions, and chaos selection are active in this build. Their complete clue, voting, and scoring screens are the next gameplay wiring step; the current playable session remains Classic mode.',
+                        'This configuration is fully validated and can generate balanced private roles. The advanced clue, ability, voting, and role-specific scoring screens are being wired in the next gameplay phase; Classic remains the current complete playable loop.',
                         style: TextStyle(height: 1.45),
                       ),
                     ),
@@ -417,5 +315,166 @@ class _ModeSetupPageState extends State<ModeSetupPage> {
         ],
       ),
     );
+  }
+}
+
+class _ModeCard extends StatelessWidget {
+  const _ModeCard({
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final GameMode mode;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF6D5DFB).withOpacity(0.22)
+              : const Color(0xFF172033),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF9B8CFF)
+                : Colors.white.withOpacity(0.08),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(_modeIcon(mode), size: 34, color: const Color(0xFFFFC857)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _modeName(mode),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    _modeDescription(mode),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white64, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _modeName(GameMode mode) {
+  switch (mode) {
+    case GameMode.classic:
+      return 'Classic Impostor';
+    case GameMode.twoSimilarWords:
+      return 'Two Similar Words';
+    case GameMode.questionInterrogation:
+      return 'Question Interrogation';
+    case GameMode.emojiClues:
+      return 'Emoji Clues';
+    case GameMode.speedRound:
+      return 'Speed Round';
+    case GameMode.anonymousClues:
+      return 'Anonymous Clues';
+    case GameMode.multipleImpostors:
+      return 'Multiple Impostors';
+    case GameMode.oneSentenceStory:
+      return 'One-Sentence Story';
+  }
+}
+
+String _modeDescription(GameMode mode) {
+  switch (mode) {
+    case GameMode.classic:
+      return 'Civilians share one word while impostors bluff without seeing it.';
+    case GameMode.twoSimilarWords:
+      return 'An undercover player receives a curated related alternate word.';
+    case GameMode.questionInterrogation:
+      return 'Players answer indirect questions instead of ordinary clues.';
+    case GameMode.emojiClues:
+      return 'Every clue is limited to emoji.';
+    case GameMode.speedRound:
+      return 'Short clue timers punish hesitation.';
+    case GameMode.anonymousClues:
+      return 'Clue owners stay hidden until the reveal.';
+    case GameMode.multipleImpostors:
+      return 'Balanced teams support more than one impostor-side player.';
+    case GameMode.oneSentenceStory:
+      return 'Each player adds a sentence that subtly references the word.';
+  }
+}
+
+IconData _modeIcon(GameMode mode) {
+  switch (mode) {
+    case GameMode.classic:
+      return Icons.visibility_off_rounded;
+    case GameMode.twoSimilarWords:
+      return Icons.compare_arrows_rounded;
+    case GameMode.questionInterrogation:
+      return Icons.quiz_rounded;
+    case GameMode.emojiClues:
+      return Icons.emoji_emotions_rounded;
+    case GameMode.speedRound:
+      return Icons.timer_rounded;
+    case GameMode.anonymousClues:
+      return Icons.privacy_tip_rounded;
+    case GameMode.multipleImpostors:
+      return Icons.groups_rounded;
+    case GameMode.oneSentenceStory:
+      return Icons.auto_stories_rounded;
+  }
+}
+
+String _roleName(AdvancedRole role) {
+  switch (role) {
+    case AdvancedRole.civilian:
+      return 'Civilian';
+    case AdvancedRole.impostor:
+      return 'Classic Impostor';
+    case AdvancedRole.mimic:
+      return 'Mimic';
+    case AdvancedRole.doubleAgent:
+      return 'Double Agent';
+    case AdvancedRole.mrBlank:
+      return 'Mr. Blank';
+    case AdvancedRole.saboteur:
+      return 'Saboteur';
+    case AdvancedRole.trickster:
+      return 'Trickster';
+  }
+}
+
+String _roleDescription(AdvancedRole role) {
+  switch (role) {
+    case AdvancedRole.civilian:
+      return 'Knows the word and helps eliminate every impostor.';
+    case AdvancedRole.impostor:
+      return 'Receives no word and wins by survival or a final guess.';
+    case AdvancedRole.mimic:
+      return 'May see the first submitted clue before giving their own.';
+    case AdvancedRole.doubleAgent:
+      return 'Knows the word but secretly belongs to the impostor side.';
+    case AdvancedRole.mrBlank:
+      return 'Receives no word and may win individually with a correct guess.';
+    case AdvancedRole.saboteur:
+      return 'Receives a related alternate word in Two Similar Words mode.';
+    case AdvancedRole.trickster:
+      return 'Wins by receiving enough votes without being eliminated.';
   }
 }
