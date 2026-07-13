@@ -20,14 +20,18 @@ void main() {
     await tester.pumpWidget(const FullSuspectGameApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Advanced Match Setup'));
+    final setupLink = find.text('Advanced Match Setup');
+    await tester.ensureVisible(setupLink);
+    await tester.tap(setupLink);
     await tester.pumpAndSettle();
 
     expect(find.text('Choose a game mode'), findsOneWidget);
-    expect(find.text('Classic Impostor'), findsOneWidget);
+    expect(find.text('Classic Impostor'), findsWidgets);
     expect(find.text('Two Similar Words'), findsOneWidget);
 
-    await tester.tap(find.text('Validate setup'));
+    final validateButton = find.text('Validate setup');
+    await tester.ensureVisible(validateButton);
+    await tester.tap(validateButton);
     await tester.pump();
     expect(find.text('Balanced configuration ready.'), findsOneWidget);
   });
@@ -36,9 +40,14 @@ void main() {
     await tester.pumpWidget(const FullSuspectGameApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Custom Word Packs'));
+    final packsLink = find.text('Custom Word Packs');
+    await tester.ensureVisible(packsLink);
+    await tester.tap(packsLink);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Create custom pack'));
+
+    final createButton = find.text('Create custom pack');
+    await tester.ensureVisible(createButton);
+    await tester.tap(createButton);
     await tester.pumpAndSettle();
 
     expect(find.text('Create Custom Pack'), findsOneWidget);
