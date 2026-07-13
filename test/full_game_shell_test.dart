@@ -25,8 +25,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Choose a game mode'), findsOneWidget);
+    expect(find.text('Game mode'), findsOneWidget);
     expect(find.text('Classic Impostor'), findsWidgets);
-    expect(find.text('Two Similar Words'), findsOneWidget);
 
     final validateButton = find.text('Validate setup');
     await tester.ensureVisible(validateButton);
