@@ -6,8 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/custom_pack.dart';
 
 class FullGameController extends ChangeNotifier {
-  FullGameController({SharedPreferencesAsync? preferences})
-      : _preferences = preferences ?? SharedPreferencesAsync();
+  FullGameController({
+    bool enablePersistence = false,
+    SharedPreferencesAsync? preferences,
+  }) : _preferences = enablePersistence
+            ? preferences ?? SharedPreferencesAsync()
+            : null;
 
   static const _displayNameKey = 'profile.displayName';
   static const _languageKey = 'settings.language';
@@ -22,7 +26,7 @@ class FullGameController extends ChangeNotifier {
   static const _customPacksKey = 'content.customPacks';
   static const _achievementsKey = 'profile.unlockedAchievements';
 
-  final SharedPreferencesAsync _preferences;
+  final SharedPreferencesAsync? _preferences;
 
   String displayName = 'Guest Detective';
   String language = 'English';
@@ -43,24 +47,31 @@ class FullGameController extends ChangeNotifier {
   Set<String> get unlockedAchievements => Set.unmodifiable(_unlockedAchievements);
 
   Future<void> loadFromStorage() async {
-    displayName = await _preferences.getString(_displayNameKey) ?? displayName;
-    language = await _preferences.getString(_languageKey) ?? language;
-    coins = await _preferences.getInt(_coinsKey) ?? coins;
-    familySafe = await _preferences.getBool(_familySafeKey) ?? familySafe;
+    final preferences = _preferences;
+    if (preferences == null) {
+      hasLoadedLocalState = true;
+      notifyListeners();
+      return;
+    }
+
+    displayName = await preferences.getString(_displayNameKey) ?? displayName;
+    language = await preferences.getString(_languageKey) ?? language;
+    coins = await preferences.getInt(_coinsKey) ?? coins;
+    familySafe = await preferences.getBool(_familySafeKey) ?? familySafe;
     reducedMotion =
-        await _preferences.getBool(_reducedMotionKey) ?? reducedMotion;
-    highContrast = await _preferences.getBool(_highContrastKey) ?? highContrast;
-    haptics = await _preferences.getBool(_hapticsKey) ?? haptics;
-    timerSounds = await _preferences.getBool(_timerSoundsKey) ?? timerSounds;
+        await preferences.getBool(_reducedMotionKey) ?? reducedMotion;
+    highContrast = await preferences.getBool(_highContrastKey) ?? highContrast;
+    haptics = await preferences.getBool(_hapticsKey) ?? haptics;
+    timerSounds = await preferences.getBool(_timerSoundsKey) ?? timerSounds;
     confirmBeforeLeaving =
-        await _preferences.getBool(_confirmLeavingKey) ?? confirmBeforeLeaving;
-    textScale = (await _preferences.getDouble(_textScaleKey) ?? textScale)
+        await preferences.getBool(_confirmLeavingKey) ?? confirmBeforeLeaving;
+    textScale = (await preferences.getDouble(_textScaleKey) ?? textScale)
         .clamp(0.9, 1.35)
         .toDouble();
 
     _customPacks.clear();
     final encodedPacks =
-        await _preferences.getStringList(_customPacksKey) ?? const <String>[];
+        await preferences.getStringList(_customPacksKey) ?? const <String>[];
     for (final encoded in encodedPacks) {
       try {
         final pack = CustomWordPack.fromJsonString(encoded);
@@ -68,14 +79,14 @@ class FullGameController extends ChangeNotifier {
           _customPacks.add(pack);
         }
       } on FormatException {
-        // Corrupted user content is ignored instead of breaking app startup.
+        // Ignore one corrupted pack while preserving all valid local content.
       }
     }
 
     _unlockedAchievements
       ..clear()
       ..addAll(
-        await _preferences.getStringList(_achievementsKey) ?? const <String>[],
+        await preferences.getStringList(_achievementsKey) ?? const <String>[],
       );
     hasLoadedLocalState = true;
     notifyListeners();
@@ -88,7 +99,7 @@ class FullGameController extends ChangeNotifier {
     }
     displayName = cleaned;
     notifyListeners();
-    unawaited(_preferences.setString(_displayNameKey, displayName));
+    _write((preferences) => preferences.setString(_displayNameKey, displayName));
   }
 
   void updateLanguage(String value) {
@@ -97,49 +108,54 @@ class FullGameController extends ChangeNotifier {
     }
     language = value;
     notifyListeners();
-    unawaited(_preferences.setString(_languageKey, language));
+    _write((preferences) => preferences.setString(_languageKey, language));
   }
 
   void updateFamilySafe(bool value) {
     familySafe = value;
     notifyListeners();
-    unawaited(_preferences.setBool(_familySafeKey, familySafe));
+    _write((preferences) => preferences.setBool(_familySafeKey, familySafe));
   }
 
   void updateReducedMotion(bool value) {
     reducedMotion = value;
     notifyListeners();
-    unawaited(_preferences.setBool(_reducedMotionKey, reducedMotion));
+    _write(
+      (preferences) => preferences.setBool(_reducedMotionKey, reducedMotion),
+    );
   }
 
   void updateHighContrast(bool value) {
     highContrast = value;
     notifyListeners();
-    unawaited(_preferences.setBool(_highContrastKey, highContrast));
+    _write((preferences) => preferences.setBool(_highContrastKey, highContrast));
   }
 
   void updateHaptics(bool value) {
     haptics = value;
     notifyListeners();
-    unawaited(_preferences.setBool(_hapticsKey, haptics));
+    _write((preferences) => preferences.setBool(_hapticsKey, haptics));
   }
 
   void updateTimerSounds(bool value) {
     timerSounds = value;
     notifyListeners();
-    unawaited(_preferences.setBool(_timerSoundsKey, timerSounds));
+    _write((preferences) => preferences.setBool(_timerSoundsKey, timerSounds));
   }
 
   void updateConfirmBeforeLeaving(bool value) {
     confirmBeforeLeaving = value;
     notifyListeners();
-    unawaited(_preferences.setBool(_confirmLeavingKey, confirmBeforeLeaving));
+    _write(
+      (preferences) =>
+          preferences.setBool(_confirmLeavingKey, confirmBeforeLeaving),
+    );
   }
 
   void updateTextScale(double value) {
     textScale = value.clamp(0.9, 1.35).toDouble();
     notifyListeners();
-    unawaited(_preferences.setDouble(_textScaleKey, textScale));
+    _write((preferences) => preferences.setDouble(_textScaleKey, textScale));
   }
 
   void savePack(CustomWordPack pack) {
@@ -196,8 +212,8 @@ class FullGameController extends ChangeNotifier {
       _unlockedAchievements.remove(id);
     }
     notifyListeners();
-    unawaited(
-      _preferences.setStringList(
+    _write(
+      (preferences) => preferences.setStringList(
         _achievementsKey,
         _unlockedAchievements.toList(growable: false),
       ),
@@ -205,13 +221,20 @@ class FullGameController extends ChangeNotifier {
   }
 
   void _persistCustomPacks() {
-    unawaited(
-      _preferences.setStringList(
+    _write(
+      (preferences) => preferences.setStringList(
         _customPacksKey,
         _customPacks
             .map((pack) => pack.toPrettyJson())
             .toList(growable: false),
       ),
     );
+  }
+
+  void _write(Future<void> Function(SharedPreferencesAsync) action) {
+    final preferences = _preferences;
+    if (preferences != null) {
+      unawaited(action(preferences));
+    }
   }
 }
