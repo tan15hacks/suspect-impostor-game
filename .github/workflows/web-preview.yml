@@ -1,4 +1,4 @@
-name: Flutter Web Preview
+name: Flutter Web Full Game
 
 on:
   push:
@@ -42,13 +42,55 @@ jobs:
         run: dart run tool/validate_content.dart
 
       - name: Analyze project
-        run: flutter analyze
+        id: analyze
+        continue-on-error: true
+        run: flutter analyze 2>&1 | tee analyzer.log
 
-      - name: Run unit tests
-        run: flutter test
+      - name: Upload analyzer report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-analyzer-report
+          path: analyzer.log
+          if-no-files-found: error
 
-      - name: Build web release
-        run: flutter build web --release --base-href "/suspect-impostor-game/"
+      - name: Enforce analyzer success
+        if: steps.analyze.outcome == 'failure'
+        run: exit 1
+
+      - name: Run unit and widget tests
+        id: tests
+        continue-on-error: true
+        run: flutter test 2>&1 | tee test-report.log
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-test-report
+          path: test-report.log
+          if-no-files-found: error
+
+      - name: Enforce test success
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
+
+      - name: Build full web shell
+        id: web_build
+        continue-on-error: true
+        run: flutter build web --release --target lib/full_main.dart --base-href "/suspect-impostor-game/" 2>&1 | tee web-build.log
+
+      - name: Upload web build report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-web-build-report
+          path: web-build.log
+          if-no-files-found: error
+
+      - name: Enforce web build success
+        if: steps.web_build.outcome == 'failure'
+        run: exit 1
 
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
