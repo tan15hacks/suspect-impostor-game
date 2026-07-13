@@ -36,7 +36,10 @@ jobs:
         run: flutter pub get
 
       - name: Format Dart sources
-        run: dart format lib test
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
+      - name: Validate curated content
+        run: dart run tool/validate_content.dart
 
       - name: Analyze project
         run: flutter analyze
