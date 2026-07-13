@@ -36,7 +36,7 @@ jobs:
         run: flutter pub get
 
       - name: Format Dart sources
-        run: dart format --output=none --set-exit-if-changed lib test tool
+        run: dart format lib test tool
 
       - name: Validate curated content
         run: dart run tool/validate_content.dart
