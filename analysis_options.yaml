@@ -1,0 +1,12 @@
+analyzer:
+  exclude:
+    - build/**
+  errors:
+    unused_import: error
+    unused_local_variable: error
+    dead_code: warning
+    deprecated_member_use: ignore
+
+linter:
+  rules:
+    avoid_print: true
