@@ -111,9 +111,9 @@ class FullHomePage extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              const CountPill(label: 'missions', value: '${secretMissions.length}'),
-              const CountPill(label: 'chaos cards', value: '${chaosCards.length}'),
-              const CountPill(label: 'achievements', value: '${achievements.length}'),
+              CountPill(label: 'missions', value: '${secretMissions.length}'),
+              CountPill(label: 'chaos cards', value: '${chaosCards.length}'),
+              CountPill(label: 'achievements', value: '${achievements.length}'),
               CountPill(label: 'custom packs', value: '${controller.customPacks.length}'),
             ],
           ),
