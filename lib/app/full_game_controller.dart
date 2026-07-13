@@ -68,7 +68,7 @@ class FullGameController extends ChangeNotifier {
   }
 
   void updateTextScale(double value) {
-    textScale = value.clamp(0.9, 1.35);
+    textScale = value.clamp(0.9, 1.35).toDouble();
     notifyListeners();
   }
 
