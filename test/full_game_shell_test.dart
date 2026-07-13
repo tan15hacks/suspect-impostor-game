@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:suspect_impostor_game/app/full_game_app.dart';
 import 'package:suspect_impostor_game/app/full_game_controller.dart';
