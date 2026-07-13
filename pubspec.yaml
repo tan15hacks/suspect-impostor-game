@@ -1,7 +1,7 @@
 name: suspect_impostor_game
-description: Web-first playable preview of Suspect! Impostor Party.
+description: Web-first Flutter build of Suspect! Impostor Party.
 publish_to: none
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
